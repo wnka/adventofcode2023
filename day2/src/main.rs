@@ -65,8 +65,6 @@ impl Game {
         let min_g = greens.iter().max().unwrap_or(&0);
         let min_b = blues.iter().max().unwrap_or(&0);
         
-        println!("R: {} G: {} B: {}", min_r, min_g, min_b);
-        
         min_r * min_g * min_b
     }
 }
@@ -198,7 +196,6 @@ fn line_parser(s: &str) -> IResult<&str, Game> {
             separated_list0(delimited(multispace0, tag(";"), multispace0), parse_grab)
         )),
         |(id, grabs)| {
-            println!("grabs {:?}", grabs);
             Game { id, grabs }
         }
     )(s)
@@ -206,7 +203,6 @@ fn line_parser(s: &str) -> IResult<&str, Game> {
 
 /// Parses a Grab, as in '1 red, 2 blue, 3 green'
 fn parse_grab(i: &str) -> IResult<&str, Grab> {
-    println!("grab: {}", i);
     map(
         separated_list0(delimited(multispace0, tag(","), multispace0), parse_grab_entry),
         |grabs| Grab { grabs }
@@ -215,7 +211,6 @@ fn parse_grab(i: &str) -> IResult<&str, Grab> {
 
 /// Parses a GrabEntry, as in '1 red'
 fn parse_grab_entry(i: &str) -> IResult<&str, GrabEntry> {
-    println!("entry: {}", i);
     map(
         separated_pair(preceded(multispace0, u64), multispace0, terminated(alphanumeric0, multispace0)),
         |(count, color)| { GrabEntry {count, color: String::from(color)} }
@@ -230,7 +225,7 @@ mod tests {
     
     #[test]
     fn test_it_all() {
-        let input = "   Game    3   :     1 green     , 7 red ; 1 green    ,     9 red\t\t, 3 blue     ;      4 blue, 5     red";
+        let input = "   Game    3   :     1 green     , 7 red ; 1 green    ,     9 red\t\t  , 3 blue     ;      4 blue, 5     red";
         let result = line_parser(input);
         assert!(result.is_ok());
         let result = result.ok();
