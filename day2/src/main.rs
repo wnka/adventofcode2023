@@ -4,10 +4,10 @@ use clap::Parser;
 
 use nom::{
     bytes::complete::tag,
-    character::complete::{u64, alphanumeric0},
+    character::complete::{u64, alphanumeric0, multispace0},
     combinator::{map, all_consuming},
     multi::separated_list0,
-    sequence::{delimited, tuple, separated_pair},
+    sequence::{delimited, tuple, separated_pair, preceded, terminated},
     IResult,
 };
 
@@ -40,7 +40,7 @@ impl Game {
     fn valid(&self, limits: &HashMap<&str, u64>) -> bool {
         self.grabs.iter().all(|val| val.valid(limits))
     }
-
+    
     /// Find the 'power'
     /// Look across all grabs and find the number of cubes
     /// required for each color to make all the grabs possible.
@@ -60,13 +60,13 @@ impl Game {
                 }
             }
         }
-
+        
         let min_r = reds.iter().max().unwrap_or(&0);
         let min_g = greens.iter().max().unwrap_or(&0);
         let min_b = blues.iter().max().unwrap_or(&0);
-
+        
         println!("R: {} G: {} B: {}", min_r, min_g, min_b);
-
+        
         min_r * min_g * min_b
     }
 }
@@ -103,7 +103,7 @@ impl Grab {
     fn valid(&self, limits: &HashMap<&str, u64>) -> bool {
         self.grabs.iter().all(|val| val.valid(limits))
     }
-
+    
     /// Return a hash map of color -> count for this grab.
     fn values(&self) -> HashMap<&str, u64> {
         let mut vals = HashMap::new();
@@ -139,7 +139,7 @@ fn main() -> Result<(), ParseError> {
         2 => part_two(input_ranges),
         _ => panic!("Unknown part")
     }
-
+    
     Ok(())
 }
 
@@ -147,7 +147,7 @@ fn main() -> Result<(), ParseError> {
 /// Return the num of all the 'powers' for each game.
 fn part_two(input_ranges: Vec<String>) {
     let mut answer = 0;
-
+    
     for range in input_ranges {
         let parsed = all_consuming(line_parser)(&range);
         answer += match parsed {
@@ -155,7 +155,7 @@ fn part_two(input_ranges: Vec<String>) {
             Err(_) => 0
         }
     }
-
+    
     println!("Answer: {}", answer);
 }
 
@@ -168,7 +168,7 @@ fn part_one(input_ranges: Vec<String>) {
     limits.insert("blue", 14);
     
     let mut answer = 0;
-
+    
     for range in input_ranges {
         let parsed = all_consuming(line_parser)(&range);
         answer += match parsed {
@@ -181,13 +181,21 @@ fn part_one(input_ranges: Vec<String>) {
 }
 
 /// Start of the nom parser for each Game / line of the input file
+/// Example:
+/// Game 1: 2 green, 12 blue; 6 red, 6 blue; 8 blue, 5 green, 5 red; 5 green, 13 blue; 3 green, 7 red, 10 blue; 13 blue, 8 red
+///      ^ = Game id
+/// Game 1: 2 green, 12 blue; 6 red, 6 blue; 8 blue, 5 green, 5 red; 5 green, 13 blue; 3 green, 7 red, 10 blue; 13 blue, 8 red
+///         ^^^^^^^^^^^^^^^^ = Grab
+/// Game 1: 2 green, 12 blue; 6 red, 6 blue; 8 blue, 5 green, 5 red; 5 green, 13 blue; 3 green, 7 red, 10 blue; 13 blue, 8 red
+///                  ^^^^^^^ = GrabEntry
+/// TODO: Doesn't handle whitespace variations.
 fn line_parser(s: &str) -> IResult<&str, Game> {
     map(
         tuple((
             // Gets the Game ID
-            delimited(tag("Game "), u64, tag(": ")),
+            delimited(delimited(multispace0, tag("Game"), multispace0), terminated(u64, multispace0), tag(":")),
             // Gets the Vec<Grab> from everything to the right of the 'Game 1: '
-            separated_list0(tag("; "), parse_grab)
+            separated_list0(delimited(multispace0, tag(";"), multispace0), parse_grab)
         )),
         |(id, grabs)| {
             println!("grabs {:?}", grabs);
@@ -198,16 +206,54 @@ fn line_parser(s: &str) -> IResult<&str, Game> {
 
 /// Parses a Grab, as in '1 red, 2 blue, 3 green'
 fn parse_grab(i: &str) -> IResult<&str, Grab> {
+    println!("grab: {}", i);
     map(
-        separated_list0(tag(", "), parse_grab_entry),
+        separated_list0(delimited(multispace0, tag(","), multispace0), parse_grab_entry),
         |grabs| Grab { grabs }
     )(i)
 } 
 
 /// Parses a GrabEntry, as in '1 red'
 fn parse_grab_entry(i: &str) -> IResult<&str, GrabEntry> {
+    println!("entry: {}", i);
     map(
-        separated_pair(u64, tag(" "), alphanumeric0),
+        separated_pair(preceded(multispace0, u64), multispace0, terminated(alphanumeric0, multispace0)),
         |(count, color)| { GrabEntry {count, color: String::from(color)} }
     )(i)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    
+    use crate::line_parser;
+    
+    #[test]
+    fn test_it_all() {
+        let input = "   Game    3   :     1 green     , 7 red ; 1 green    ,     9 red\t\t, 3 blue     ;      4 blue, 5     red";
+        let result = line_parser(input);
+        assert!(result.is_ok());
+        let result = result.ok();
+        assert!(result.is_some());
+        
+        let result = result.unwrap();
+        assert_eq!(result.0, "");
+        assert_eq!(result.1.id, 3);
+        
+        let mut limits : HashMap<&str, u64> = HashMap::new();
+        limits.insert("green", 13);
+        limits.insert("red", 9);
+        limits.insert("blue", 14);
+        
+        assert!(result.1.valid(&limits));
+        
+        let mut limits : HashMap<&str, u64> = HashMap::new();
+        limits.insert("green", 13);
+        limits.insert("red", 8);
+        limits.insert("blue", 14);
+        
+        assert!(!result.1.valid(&limits));
+        
+        assert_eq!(result.1.power(), 36);
+    }
 }
