@@ -4,11 +4,15 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
+/// Command line args
 struct Args {
     /// Filename to read
     #[arg(short, long)]
     input: String,
 
+    /// Which part of the day we're solving
+    /// Usually only 1 or 2
+    /// Defaults to 1
     #[arg(short, long, default_value_t = 1)]
     part: u8,
 }
@@ -18,16 +22,18 @@ enum ParseError {
     Error
 }
 
+/// Read an input file and return a Ok(Vec<String>) with one String per line
+/// If something weird happens, return Err(ParseError::Error)
 fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead {
-    let mut ranges = Vec::new();
+    let mut result = Vec::new();
     let lines = BufReader::new(input_buffer).lines();
     for line in lines {
         match line {
-            Ok(s) => ranges.push(s),
+            Ok(s) => result.push(s),
             Err(_) => return Err(ParseError::Error)
         }
     }
-    Ok(ranges)
+    Ok(result)
 }
 
 fn main() -> Result<(), ParseError> {
