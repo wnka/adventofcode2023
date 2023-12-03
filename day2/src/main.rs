@@ -150,7 +150,7 @@ fn part_two(input_ranges: Vec<String>) {
         let parsed = all_consuming(line_parser)(&range);
         answer += match parsed {
             Ok(v) => v.1.power(),
-            Err(_) => 0
+            Err(e) => panic!("Parse error: {:?}", e)
         }
     }
     
@@ -168,6 +168,7 @@ fn part_one(input_ranges: Vec<String>) {
     let mut answer = 0;
     
     for range in input_ranges {
+        // all_consuming makes sure everything in the line gets parsed and there are no leftovers.
         let parsed = all_consuming(line_parser)(&range);
         answer += match parsed {
             Ok(v) => if v.1.valid(&limits) { v.1.id } else { 0 },
