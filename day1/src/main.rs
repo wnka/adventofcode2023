@@ -9,6 +9,9 @@ struct Args {
     /// Filename to read
     #[arg(short, long)]
     input: String,
+
+    #[arg(short, long, default_value_t = 1)]
+    part: u8,
 }
 
 #[derive(Debug)]
@@ -37,7 +40,11 @@ fn main() -> Result<(), ParseError> {
     let mut sum = 0;
     
     for input in input_ranges {
-        let range = words_to_numbers(input.clone());
+        let range = match args.part{
+            1 => (input.clone(), input.clone()),
+            2 => words_to_numbers(input.clone()),
+            _ => panic!("Unknown part!")
+        };
         let digits_l : Vec<char> = range.0.chars().filter(|c| c.is_ascii_digit()).collect();
         let digits_r : Vec<char> = range.1.chars().filter(|c| c.is_ascii_digit()).collect();
         let value = digits_l.first().unwrap().to_digit(10).unwrap() * 10 + digits_r.last().unwrap().to_digit(10).unwrap();
@@ -73,20 +80,18 @@ fn words_to_numbers(input: String) -> (String, String) {
     let mut left_most: Option<(usize, (&str, &str))> = None;
     for number in number_words {
         let find_num = input.find(number.0);
-        if find_num.is_some() {
-            let find_num = find_num.unwrap();
-            match left_most {
-                Some(_n) => if find_num < left_most.unwrap().0 { left_most = Some((find_num, number))},
-                None => left_most = Some((find_num, number))
+        if let Some(find_num) = find_num {
+            left_most = match left_most {
+                Some(n) => if find_num < n.0 { Some((find_num, number))} else {Some(n)},
+                None => Some((find_num, number))
             }
         }
         
         let rfind_num = input.rfind(number.0);
-        if rfind_num.is_some() {
-            let rfind_num = rfind_num.unwrap();
-            match right_most {
-                Some(_n) => if rfind_num > right_most.unwrap().0 { right_most = Some((rfind_num, number))},
-                None => right_most = Some((rfind_num, number))
+        if let Some(rfind_num) = rfind_num {
+            right_most = match right_most {
+                Some(n) => if rfind_num > n.0 { Some((rfind_num, number))} else {Some(n)},
+                None => Some((rfind_num, number))
             }
         }
     }
@@ -94,11 +99,11 @@ fn words_to_numbers(input: String) -> (String, String) {
     println!("Left most = {:?}", left_most);
     println!("Right most = {:?}", right_most);
     
-    if left_most.is_some() {
-        wip_l = wip_l.replace(left_most.unwrap().1.0, left_most.unwrap().1.1);
+    if let Some(left_most) = left_most {
+        wip_l = wip_l.replace(left_most.1.0, left_most.1.1);
     }
-    if right_most.is_some() {
-        wip_r = wip_r.replace(right_most.unwrap().1.0, right_most.unwrap().1.1);
+    if let Some(right_most) = right_most {
+        wip_r = wip_r.replace(right_most.1.0, right_most.1.1);
     }
     
     // For twone: wip_l = 2ne, wip_r = tw1

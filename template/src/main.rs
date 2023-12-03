@@ -9,6 +9,9 @@ struct Args {
     /// Filename to read
     #[arg(short, long)]
     input: String,
+
+    #[arg(short, long, default_value_t = 1)]
+    part: u8,
 }
 
 #[derive(Debug)]
