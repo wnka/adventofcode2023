@@ -37,6 +37,30 @@ impl Game {
     fn valid(&self, limits: HashMap<&str, u64>) -> bool {
         self.grabs.iter().fold(true, |res, val| res && val.valid(limits.clone()))
     }
+
+    fn power(&self) -> u64 {
+        let mut greens = Vec::new();
+        let mut blues = Vec::new();
+        let mut reds = Vec::new();
+        for grab in &self.grabs {
+            for (k, v) in grab.values() {
+                match k {
+                    "red" => reds.push(v),
+                    "green" => greens.push(v),
+                    "blue" => blues.push(v),
+                    _ => panic!("Unknown color!"),
+                }
+            }
+        }
+
+        let min_r = reds.iter().max().unwrap_or(&0);
+        let min_g = greens.iter().max().unwrap_or(&0);
+        let min_b = blues.iter().max().unwrap_or(&0);
+
+        println!("R: {} G: {} B: {}", min_r, min_g, min_b);
+
+        min_r * min_g * min_b
+    }
 }
 
 #[derive(Debug)]
@@ -63,6 +87,14 @@ impl Grab {
     fn valid(&self, limits: HashMap<&str, u64>) -> bool {
         self.grabs.iter().fold(true, |res, val| res && val.valid(limits.clone()))
     }
+
+    fn values(&self) -> HashMap<&str, u64> {
+        let mut vals = HashMap::new();
+        for entry in &self.grabs {
+            vals.insert(entry.color.as_str(), entry.count);
+        }
+        vals
+    }
 }
 fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead {
     let mut ranges = Vec::new();
@@ -82,6 +114,30 @@ fn main() -> Result<(), ParseError> {
     let input_file = File::open(args.input).unwrap();
     let input_ranges = parse(BufReader::new(input_file))?;
     
+    match args.part {
+        1 => part_one(input_ranges),
+        2 => part_two(input_ranges),
+        _ => panic!("Unknown part")
+    }
+
+    Ok(())
+}
+
+fn part_two(input_ranges: Vec<String>) {
+    let mut answer = 0;
+
+    for range in input_ranges {
+        let parsed = all_consuming(line_parser)(&range);
+        answer += match parsed {
+            Ok(v) => v.1.power(),
+            Err(_) => 0
+        }
+    }
+
+    println!("Answer: {}", answer);
+}
+
+fn part_one(input_ranges: Vec<String>) {
     let mut limits = HashMap::new();
     limits.insert("green", 13);
     limits.insert("red", 12);
@@ -98,8 +154,6 @@ fn main() -> Result<(), ParseError> {
     }
     
     println!("Answer: {}", answer);
-
-    Ok(())
 }
 
 fn line_parser(s: &str) -> IResult<&str, Game> {
