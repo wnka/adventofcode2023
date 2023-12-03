@@ -1,15 +1,13 @@
-use std::{fs::File, io::{BufRead, BufReader}};
+use std::{fs::File, io::{BufRead, BufReader}, collections::HashMap};
 
 use clap::Parser;
 
 use nom::{
-    branch::alt,
     bytes::complete::tag,
-    bytes::complete::take_while1,
-    character::complete::{newline, space0, u64, alphanumeric0},
+    character::complete::{u64, alphanumeric0},
     combinator::{map, all_consuming},
     multi::separated_list0,
-    sequence::{delimited, pair, preceded, terminated, tuple, separated_pair},
+    sequence::{delimited, tuple, separated_pair},
     IResult,
 };
 
@@ -19,7 +17,7 @@ struct Args {
     /// Filename to read
     #[arg(short, long)]
     input: String,
-
+    
     #[arg(short, long, default_value_t = 1)]
     part: u8,
 }
@@ -35,10 +33,25 @@ struct Game {
     grabs: Vec<Grab>
 }
 
+impl Game {
+    fn valid(&self, limits: HashMap<&str, u64>) -> bool {
+        self.grabs.iter().fold(true, |res, val| res && val.valid(limits.clone()))
+    }
+}
+
 #[derive(Debug)]
 struct GrabEntry {
     count: u64,
     color: String,
+}
+
+impl GrabEntry {
+    fn valid(&self, limits: HashMap<&str, u64>) -> bool {
+        match limits.get(self.color.as_str()) {
+            Some(limit) => self.count <= *limit,
+            None => panic!("No limit for that color!")
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -46,8 +59,11 @@ struct Grab {
     grabs: Vec<GrabEntry>
 }
 
-
-
+impl Grab {
+    fn valid(&self, limits: HashMap<&str, u64>) -> bool {
+        self.grabs.iter().fold(true, |res, val| res && val.valid(limits.clone()))
+    }
+}
 fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead {
     let mut ranges = Vec::new();
     let lines = BufReader::new(input_buffer).lines();
@@ -62,14 +78,26 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
 
 fn main() -> Result<(), ParseError> {
     let args = Args::parse();
-
+    
     let input_file = File::open(args.input).unwrap();
     let input_ranges = parse(BufReader::new(input_file))?;
+    
+    let mut limits = HashMap::new();
+    limits.insert("green", 13);
+    limits.insert("red", 12);
+    limits.insert("blue", 14);
+    
+    let mut answer = 0;
 
     for range in input_ranges {
         let parsed = all_consuming(line_parser)(&range);
-        println!("{:?}", parsed);
+        answer += match parsed {
+            Ok(v) => if v.1.valid(limits.clone()) { v.1.id } else { 0 },
+            Err(_) => 0
+        }
     }
+    
+    println!("Answer: {}", answer);
 
     Ok(())
 }
@@ -77,14 +105,14 @@ fn main() -> Result<(), ParseError> {
 fn line_parser(s: &str) -> IResult<&str, Game> {
     map(
         tuple((
-        delimited(tag("Game "), u64, tag(": ")),
-        separated_list0(tag("; "), parse_grab)
+            delimited(tag("Game "), u64, tag(": ")),
+            separated_list0(tag("; "), parse_grab)
         ))
-    ,
-    |(id, grabs)| {
-        println!("grabs {:?}", grabs);
-        Game { id, grabs }
-    }
+        ,
+        |(id, grabs)| {
+            println!("grabs {:?}", grabs);
+            Game { id, grabs }
+        }
     )(s)
 }
 
