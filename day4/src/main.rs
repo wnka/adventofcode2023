@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader}, collections::HashSet};
+use std::{fs::File, io::{BufRead, BufReader}, collections::{HashSet, HashMap}, f32::consts::E};
 
 use clap::Parser;
 
@@ -45,7 +45,7 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
     Ok(result)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Card {
     id: u64,
     winners: Vec<u64>,
@@ -62,6 +62,17 @@ impl Card {
         } else {
             2_u32.pow(matches-1)
         }
+    }
+
+    fn compute_copies(&self) -> Vec<u64> {
+        let winners : HashSet<u64> = self.winners.clone().into_iter().collect();
+        let numbers : HashSet<u64> = self.numbers.clone().into_iter().collect();
+        let matches : u32 = winners.intersection(&numbers).collect::<Vec<&u64>>().len().try_into().unwrap();
+        let mut retval = Vec::new();
+        for i in 1_u64..=matches.into() {
+            retval.push(self.id + i);
+        }
+        retval
     }
 }
 
@@ -91,17 +102,34 @@ fn main() -> Result<(), ParseError> {
     let input_ranges = parse(BufReader::new(input_file))?;
     
     let mut answer = 0;
+    let mut pt2_pending : Vec<u64> = Vec::new();
+    let mut card_index: HashMap<u64, Card> = HashMap::new();
     for range in input_ranges {
         let card = match all_consuming(line_parser)(&range) {
             Ok(s) => s.1,
             Err(e) => panic!("Parser problem! {:?}", e)
         };
+        card_index.insert(card.id, card.clone());
 
-        println!("id {} score {}", card.id, card.compute_score());
         answer += card.compute_score();
+
+        pt2_pending.push(card.id);
+    }
+
+    let mut pt2_processed = Vec::new();
+    loop {
+        let pending = pt2_pending.pop();
+        match pending {
+            Some(p) => {
+                pt2_processed.push(p);
+                pt2_pending.append(&mut card_index.get(&p).unwrap().compute_copies())
+            },
+            None => break
+        }
     }
     
     println!("Answer: {}", answer);
+    println!("Pt2 Answer: {}", pt2_processed.len());
 
     Ok(())
 }
