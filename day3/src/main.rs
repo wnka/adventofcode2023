@@ -48,7 +48,7 @@ fn intersect(a: &Range<usize>, b: &Range<usize>) -> bool {
     max(a.start, b.start) <= min(a.end-1, b.end-1)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CandidatePart {
     value: usize,
     range: Range<usize>,
@@ -58,8 +58,10 @@ struct CandidatePart {
 
 #[derive(Debug, Clone)]
 struct Symbol {
+    value: String,
     range: Range<usize>,
     row: usize,
+    adjecent_parts: Vec<CandidatePart>,
 }
 
 fn main() -> Result<(), ParseError> {
@@ -68,6 +70,17 @@ fn main() -> Result<(), ParseError> {
     let input_file = File::open(args.input).unwrap();
     let input_ranges = parse(BufReader::new(input_file))?;
     
+    match args.part {
+        1 => part_one(input_ranges, args.debug),
+        2 => part_two(input_ranges, args.debug),
+        _ => panic!("unknown part")
+    }
+    
+    Ok(())
+}
+
+// correct value for my input was 550934
+fn part_one(input_ranges: Vec<String>, debug: bool) {
     let mut rows: Vec<Vec<CandidatePart>> = Vec::new();
     for _ in 0..input_ranges.len() {
         rows.push(Vec::new());
@@ -78,7 +91,7 @@ fn main() -> Result<(), ParseError> {
         symbols.push(Vec::new());
     }
     for (row, line) in input_ranges.iter().enumerate() {
-        if args.debug {
+        if debug {
             println!("ROW {}: {}", row, line);
         }
         let numbers_re = Regex::new("[0-9]+").unwrap();
@@ -90,7 +103,7 @@ fn main() -> Result<(), ParseError> {
         for extract in symbols_re.captures_iter(&line).map(|e| e.get(0).unwrap()) {
             // Symbol range, expand it to be 3 units wide to catch diagonals
             let expand_range = max(0, extract.range().start-1)..min(line.len()-1, extract.range().end+1);
-            let symbol = Symbol { range: expand_range, row};
+            let symbol = Symbol { value: extract.as_str().to_string(), range: expand_range, row, adjecent_parts: Vec::new() };
             symbols.get_mut(row).unwrap().push(symbol.clone());
             
             // Add the symbols to the rows above and below to make things easier.
@@ -102,23 +115,7 @@ fn main() -> Result<(), ParseError> {
             }
         }
     }
-
-    match args.part {
-        1 => part_one(&mut rows, &symbols, args.debug),
-        2 => part_two(&mut rows, &symbols, args.debug),
-        _ => panic!("unknown part")
-    }
-
-    if args.debug {
-        for (row, i) in symbols.iter().enumerate() {
-            println!("row {}: {:?}", row, i);
-        }
-    }
     
-    Ok(())
-}
-
-fn part_one(rows: &mut Vec<Vec<CandidatePart>>, symbols: &Vec<Vec<Symbol>>, debug: bool) {
     let mut running_sum = 0;
     for (row, i) in rows.iter_mut().enumerate() {
         for candidate in i.iter_mut() {
@@ -133,11 +130,63 @@ fn part_one(rows: &mut Vec<Vec<CandidatePart>>, symbols: &Vec<Vec<Symbol>>, debu
             println!("row {}: {:?}", row, i);
         }
     }
+    
+    if debug {
+        for (row, i) in symbols.iter().enumerate() {
+            println!("row {}: {:?}", row, i);
+        }
+    }
+    
     println!("Answer: {}", running_sum);
 }
 
-fn part_two(rows: &mut Vec<Vec<CandidatePart>>, symbols: &Vec<Vec<Symbol>>, debug: bool) {
-    println!("Answer: TODO");
+fn part_two(input_ranges: Vec<String>, debug: bool) {
+    let mut rows: Vec<Vec<CandidatePart>> = Vec::new();
+    for _ in 0..input_ranges.len() {
+        rows.push(Vec::new());
+    }
+    
+    let mut symbols: Vec<Vec<Symbol>> = Vec::new();
+    for _ in 0..input_ranges.len() {
+        symbols.push(Vec::new());
+    }
+    for (row, line) in input_ranges.iter().enumerate() {
+        if debug {
+            println!("ROW {}: {}", row, line);
+        }
+        let numbers_re = Regex::new("[0-9]+").unwrap();
+        for extract in numbers_re.captures_iter(&line).map(|e| e.get(0).unwrap()) {
+            rows.get_mut(row).unwrap().push(CandidatePart { value: extract.as_str().parse().unwrap(), range: extract.range(), row, is_part: false});
+        }
+        
+        let symbols_re = Regex::new("[\\*]").unwrap();
+        for extract in symbols_re.captures_iter(&line).map(|e| e.get(0).unwrap()) {
+            // Symbol range, expand it to be 3 units wide to catch diagonals
+            let expand_range = max(0, extract.range().start-1)..min(line.len()-1, extract.range().end+1);
+            let symbol = Symbol { value: extract.as_str().to_string(), range: expand_range, row, adjecent_parts: Vec::new() };
+            symbols.get_mut(row).unwrap().push(symbol.clone());
+        }
+    }
+    
+    let mut running_sum = 0;
+    for (row, i) in symbols.iter().enumerate() {
+        for symbol in i.iter() {
+            let mut adjecents : Vec<CandidatePart> = Vec::new();
+            for row_idx in max(0, row-1)..min(rows.len(), row+2) {
+                println!("row: {} row_idx: {}", row, row_idx);
+                for candidate in rows.get(row_idx).unwrap() {
+                    if intersect(&symbol.range, &candidate.range) {
+                        adjecents.push(candidate.clone());
+                    }
+                }
+            }
+            if adjecents.len() == 2 {
+                running_sum += adjecents.iter().fold(1, |acc, x| acc * x.value);
+            }            
+        }
+    }
+        
+    println!("Answer: {}", running_sum);
 }
 
 #[cfg(test)]
