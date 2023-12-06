@@ -16,11 +16,7 @@ struct Args {
     /// Usually only 1 or 2
     /// Defaults to 1
     #[arg(short, long, default_value_t = 1)]
-    part: u8,
-    
-    /// Debug output
-    #[arg(short, long)]
-    debug: bool,
+    part: u8,    
 }
 
 #[derive(Debug)]
@@ -69,8 +65,8 @@ fn main() -> Result<(), ParseError> {
     let input_ranges = parse(BufReader::new(input_file))?;
     
     match args.part {
-        1 => part_one(input_ranges, args.debug),
-        2 => part_two(input_ranges, args.debug),
+        1 => part_one(input_ranges),
+        2 => part_two(input_ranges),
         _ => panic!("unknown part")
     }
     
@@ -78,13 +74,10 @@ fn main() -> Result<(), ParseError> {
 }
 
 // correct value for my input was 550934
-fn part_one(input_ranges: Vec<String>, debug: bool) {
+fn part_one(input_ranges: Vec<String>) {
     let mut rows: Vec<Vec<CandidatePart>> = vec![Vec::new(); input_ranges.len()]; 
     let mut symbols: Vec<Vec<Symbol>> = vec![Vec::new(); input_ranges.len()];
     for (row, line) in input_ranges.iter().enumerate() {
-        if debug {
-            println!("ROW {}: {}", row, line);
-        }
         let numbers_re = Regex::new("[0-9]+").unwrap();
         for extract in numbers_re.captures_iter(line).map(|e| e.get(0).unwrap()) {
             rows.get_mut(row).unwrap().push(CandidatePart { value: extract.as_str().parse().unwrap(), range: extract.range(), row });
@@ -117,28 +110,16 @@ fn part_one(input_ranges: Vec<String>, debug: bool) {
                 }
             }
         }
-        if debug {
-            println!("row {}: {:?}", row, i);
-        }
     }
-    
-    if debug {
-        for (row, i) in symbols.iter().enumerate() {
-            println!("row {}: {:?}", row, i);
-        }
-    }
-    
+        
     println!("Answer: {}", running_sum);
 }
 
 // For me, 81997870 was correct answer
-fn part_two(input_ranges: Vec<String>, debug: bool) {
+fn part_two(input_ranges: Vec<String>) {
     let mut rows: Vec<Vec<CandidatePart>> = vec![Vec::new(); input_ranges.len()]; 
     let mut symbols: Vec<Vec<Symbol>> = vec![Vec::new(); input_ranges.len()];
     for (row, line) in input_ranges.iter().enumerate() {
-        if debug {
-            println!("ROW {}: {}", row, line);
-        }
         let numbers_re = Regex::new("[0-9]+").unwrap();
         for extract in numbers_re.captures_iter(line).map(|e| e.get(0).unwrap()) {
             rows.get_mut(row).unwrap().push(CandidatePart { value: extract.as_str().parse().unwrap(), range: extract.range(), row });
@@ -160,9 +141,6 @@ fn part_two(input_ranges: Vec<String>, debug: bool) {
             assert!(symbol.value == "*");
             let mut adjecents : Vec<CandidatePart> = Vec::new();
             for row_idx in max(0, row-1)..min(rows.len(), row+2) {
-                if debug {
-                    println!("row: {} row_idx: {}", row, row_idx);
-                }
                 for candidate in rows.get(row_idx).unwrap() {
                     assert!(candidate.row == row_idx);
                     if intersect(&symbol.range, &candidate.range) {
