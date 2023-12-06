@@ -79,15 +79,8 @@ fn main() -> Result<(), ParseError> {
 
 // correct value for my input was 550934
 fn part_one(input_ranges: Vec<String>, debug: bool) {
-    let mut rows: Vec<Vec<CandidatePart>> = Vec::new();
-    for _ in 0..input_ranges.len() {
-        rows.push(Vec::new());
-    }
-    
-    let mut symbols: Vec<Vec<Symbol>> = Vec::new();
-    for _ in 0..input_ranges.len() {
-        symbols.push(Vec::new());
-    }
+    let mut rows: Vec<Vec<CandidatePart>> = vec![Vec::new(); input_ranges.len()]; 
+    let mut symbols: Vec<Vec<Symbol>> = vec![Vec::new(); input_ranges.len()];
     for (row, line) in input_ranges.iter().enumerate() {
         if debug {
             println!("ROW {}: {}", row, line);
@@ -140,15 +133,8 @@ fn part_one(input_ranges: Vec<String>, debug: bool) {
 
 // For me, 81997870 was correct answer
 fn part_two(input_ranges: Vec<String>, debug: bool) {
-    let mut rows: Vec<Vec<CandidatePart>> = Vec::new();
-    for _ in 0..input_ranges.len() {
-        rows.push(Vec::new());
-    }
-    
-    let mut symbols: Vec<Vec<Symbol>> = Vec::new();
-    for _ in 0..input_ranges.len() {
-        symbols.push(Vec::new());
-    }
+    let mut rows: Vec<Vec<CandidatePart>> = vec![Vec::new(); input_ranges.len()]; 
+    let mut symbols: Vec<Vec<Symbol>> = vec![Vec::new(); input_ranges.len()];
     for (row, line) in input_ranges.iter().enumerate() {
         if debug {
             println!("ROW {}: {}", row, line);
