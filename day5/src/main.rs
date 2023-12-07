@@ -134,13 +134,25 @@ fn main() -> Result<(), ParseError> {
 
     let mut src2dst : HashMap<String, Block> = HashMap::new();
     for block in blocks {
-        println!("{:?}", block);
         src2dst.insert(block.from.clone(), block);
     }
 
+    let mut results: Vec<u64> = Vec::new();
+
     for i in seeds {
-        println!("seed: {}, next: {}", i, src2dst.get("seed").unwrap().get_dest(i));
+        let mut src = String::from("seed");
+        let mut value = i;
+        while let Some(dest) = src2dst.get(&src) {
+            value = dest.get_dest(value);
+            src = dest.to.clone();
+        }
+        assert_eq!(src, "location");
+        println!("seed: {}, location: {}", i, value);
+        results.push(value);
     }
+
+    // Part 1 answer for me was 457535844
+    println!("Answer: {}", results.iter().min().unwrap());
 
     Ok(())
 }
