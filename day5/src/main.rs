@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader, Read}, str, ops::Range, collections::VecDeque};
+use std::{fs::File, io::{BufRead, BufReader, Read}, str, ops::Range, collections::{VecDeque, HashMap}};
 
 use clap::Parser;
 
@@ -31,17 +31,41 @@ enum ParseError {
     Error
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Block {
     from: String,
     to: String,
     ranges: Vec<Ranges>
 }
 
-#[derive(Debug)]
+impl Block {
+    fn get_dest(&self, src: u64) -> u64 {
+        for range in &self.ranges {
+            if let Some(dest) = range.get_dest(src) {
+                return dest;
+            }
+        }
+
+        src
+    }
+}
+
+#[derive(Debug, Clone)]
 struct Ranges {
     source: Range<u64>,
     destination: Range<u64>
+}
+
+impl Ranges {
+    fn get_dest(&self, src: u64) -> Option<u64> {
+        match self.source.contains(&src) {
+            true => {
+                let offset = src - self.source.start;
+                Some(self.destination.start + offset)
+            },
+            false => None
+        }
+    }
 }
 
 fn chunk_parser(s: &str) -> IResult<&str, Block> {
@@ -108,8 +132,14 @@ fn main() -> Result<(), ParseError> {
 
     println!("seeds: {:?}", seeds);
 
-    for range in blocks {
-        println!("{:?}", range);
+    let mut src2dst : HashMap<String, Block> = HashMap::new();
+    for block in blocks {
+        println!("{:?}", block);
+        src2dst.insert(block.from.clone(), block);
+    }
+
+    for i in seeds {
+        println!("seed: {}, next: {}", i, src2dst.get("seed").unwrap().get_dest(i));
     }
 
     Ok(())
