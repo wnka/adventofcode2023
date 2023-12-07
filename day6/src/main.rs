@@ -65,6 +65,19 @@ fn distance_parser(s: &str) -> IResult<&str, Vec<u64>> {
         |(_, _, vals)| vals )(s)
 }
 
+fn find_record_breaking_count(time: u64, record: u64) -> u64 {
+    let mut count = 0;
+    println!("Computing count for time: {} record: {}", time, record);
+    for i in 1..=time {
+        let time_charge = i;
+        let time_move = time-i;
+        let distance = time_move * time_charge;
+        println!("\tCharge: {}, Distance: {}", time_charge, distance);
+        if distance > record { count += 1 }
+    }
+    count
+}
+
 fn main() -> Result<(), ParseError> {
     let args = Args::parse();
 
@@ -86,6 +99,17 @@ fn main() -> Result<(), ParseError> {
     };
 
     println!("distance: {:?}", distance_vals);
+
+    assert_eq!(time_vals.len(), distance_vals.len());
+
+    let mut answer = 1;
+    for (time, distance) in time_vals.iter().zip(distance_vals.iter()) {
+        let count = find_record_breaking_count(*time, *distance);
+        println!("Time: {}, Distance: {}, Records: {}", time, distance, count);
+        if count > 0 { answer *= count }
+    }
+
+    println!("Answer: {}", answer);
 
     Ok(())
 }
