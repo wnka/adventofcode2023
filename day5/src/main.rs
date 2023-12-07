@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufRead, BufReader, Read}, str, ops::Range, collections::{VecDeque, HashMap}};
+use std::{fs::File, io::{BufRead, BufReader, Read}, str, ops::Range, collections::{VecDeque, HashMap}, cmp::min};
 
 use clap::Parser;
 
@@ -7,7 +7,7 @@ use nom::{
     character::complete::{u64, alphanumeric1},
     combinator::{map, all_consuming},
     multi::separated_list1,
-    sequence::tuple,
+    sequence::{tuple, separated_pair},
     IResult,
 };
 
@@ -96,22 +96,23 @@ fn parse_ranges(s: &str) -> IResult<&str, Ranges> {
     )(s)
 }
 
-fn parse_seeds(s: &str) -> IResult<&str, Vec<u64>> {
+fn parse_seeds(s: &str) -> IResult<&str, Vec<(u64, u64)>> {
     map(
         tuple((
             tag("seeds: "),
-            separated_list1(tag(" "), u64)
+            separated_list1(tag(" "), separated_pair(u64, tag(" "), u64))
         )),
         |(_, v)| { v }
     )(s)
 }
-fn parse<T>(input_buffer: T) -> Result<(Vec<u64>, Vec<Block>), ParseError> where T: BufRead {
+fn parse<T>(input_buffer: T) -> Result<(Vec<(u64, u64)>, Vec<Block>), ParseError> where T: BufRead {
     let mut reader = BufReader::new(input_buffer);
     let mut block = vec![];
     reader.read_to_end(&mut block).unwrap();
     let file_contents = str::from_utf8(&block).unwrap();
     let mut blocks : VecDeque<&str> = file_contents.split("\n\n").collect();
-    let seeds: Vec<u64> = match all_consuming(parse_seeds)(blocks.pop_front().unwrap()) {
+
+    let seeds: Vec<(u64, u64)> = match all_consuming(parse_seeds)(blocks.pop_front().unwrap()) {
         Ok(s) => s.1,
         Err(e) => panic!("Seed Parser Problem! {:?}", e)
     };
@@ -137,9 +138,11 @@ fn main() -> Result<(), ParseError> {
         src2dst.insert(block.from.clone(), block);
     }
 
-    let mut results: Vec<u64> = Vec::new();
+    let mut minv: u64 = u64::MAX;
 
-    for i in seeds {
+    for (i, j) in seeds {
+        //println!("i: {}, j: {}", i, j);
+        for i in i..(i+j) {
         let mut src = String::from("seed");
         let mut value = i;
         while let Some(dest) = src2dst.get(&src) {
@@ -147,12 +150,13 @@ fn main() -> Result<(), ParseError> {
             src = dest.to.clone();
         }
         assert_eq!(src, "location");
-        println!("seed: {}, location: {}", i, value);
-        results.push(value);
+        //println!("seed: {}, location: {}", i, value);
+        minv = min(minv, value);
+    }
     }
 
     // Part 1 answer for me was 457535844
-    println!("Answer: {}", results.iter().min().unwrap());
+    println!("Answer: {}", minv);
 
     Ok(())
 }
