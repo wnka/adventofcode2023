@@ -76,6 +76,7 @@ impl PartialEq for Game {
 
 impl Game {
     fn new(input: &str, bid: u64) -> Self {
+        assert_eq!(input.len(), 5);
         let mut hand = vec![];
         for c in input.chars() {
             let num_val = match c {
@@ -90,7 +91,20 @@ impl Game {
         }
 
         let set: HashSet<char> = HashSet::from_iter(input.chars().collect::<Vec<_>>());
-        let hand_type = set.iter().map(|v| input.matches(*v).count()).max().unwrap() as u8;
+        let mut occurrences = set.iter().map(|v| input.matches(*v).count()).collect::<Vec<usize>>();
+        occurrences.sort();
+        let hand_type1 = occurrences.pop();
+        let hand_type2 = occurrences.pop();
+
+        let hand_type: u8 = match (hand_type1, hand_type2) {
+            (Some(5), _) => 7,
+            (Some(4), _) => 6,
+            (Some(3), Some(2)) => 5, // full house
+            (Some(3), _) => 4,
+            (Some(2), Some(2)) => 3, // 2 pair
+            (Some(2), _) => 2,
+            (_,_) => 1
+        };
 
         //let hand_type = HashSet::from_iter(test.chars().collect::<Vec<_>>());
         Self { input: String::from(input), hand: hand, bid:bid, hand_type:hand_type }
@@ -122,7 +136,7 @@ fn main() -> Result<(), ParseError> {
 
     }
     games.sort();
-    games.reverse();
+    //games.reverse();
 
     let mut answer = 0;
     for (index, game) in games.iter().enumerate() {
