@@ -72,7 +72,7 @@ fn find_record_breaking_count(time: u64, record: u64) -> u64 {
         let time_charge = i;
         let time_move = time-i;
         let distance = time_move * time_charge;
-        println!("\tCharge: {}, Distance: {}", time_charge, distance);
+        //println!("\tCharge: {}, Distance: {}", time_charge, distance);
         if distance > record { count += 1 }
     }
     count
