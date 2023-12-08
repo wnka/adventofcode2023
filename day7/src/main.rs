@@ -11,7 +11,7 @@ struct Args {
     /// Filename to read
     #[arg(short, long)]
     input: String,
-
+    
     /// Which part of the day we're solving
     /// Usually only 1 or 2
     /// Defaults to 1
@@ -53,7 +53,7 @@ impl PartialOrd for Game {
             println!("CMP!");
             return Some(hand_cmp);
         }
-
+        
         assert_eq!(self.hand.len(), other.hand.len());
         for (s, o) in self.hand.iter().zip(other.hand.iter()) {
             let card_cmp = s.cmp(o);
@@ -62,7 +62,7 @@ impl PartialOrd for Game {
                 _ => { return Some(card_cmp); }
             }
         }
-
+        
         Some(Ordering::Equal)
     }
 }
@@ -83,29 +83,33 @@ impl Game {
                 'A' => 14,
                 'K' => 13,
                 'Q' => 12,
-                'J' => 11,
+                'J' => 1,
                 'T' => 10,
                 _ => c.to_digit(10).unwrap()
             };
             hand.push(num_val as u8);
         }
-
+        
         let set: HashSet<char> = HashSet::from_iter(input.chars().collect::<Vec<_>>());
-        let mut occurrences = set.iter().map(|v| input.matches(*v).count()).collect::<Vec<usize>>();
+        let mut occurrences = set.iter().filter(|v| **v != 'J').map(|v| input.matches(*v).count()).collect::<Vec<usize>>();
         occurrences.sort();
-        let hand_type1 = occurrences.pop();
-        let hand_type2 = occurrences.pop();
-
-        let hand_type: u8 = match (hand_type1, hand_type2) {
-            (Some(5), _) => 7,
-            (Some(4), _) => 6,
-            (Some(3), Some(2)) => 5, // full house
-            (Some(3), _) => 4,
-            (Some(2), Some(2)) => 3, // 2 pair
-            (Some(2), _) => 2,
-            (_,_) => 1
+        
+        let joker_count = input.matches('J').count();
+        let hand_type = if joker_count == 5 { 7 } else {
+            let hand_type1 = occurrences.pop().unwrap();
+            let hand_type2 = occurrences.pop();
+            
+            match (hand_type1 + joker_count, hand_type2) {
+                (5, _) => 7,
+                (4, _) => 6,
+                (3, Some(2)) => 5, // full house
+                (3, _) => 4, // 3 of a kind
+                (2, Some(2)) => 3, // 2 pair
+                (2, _) => 2,
+                (_,_) => 1
+            }
         };
-
+        
         //let hand_type = HashSet::from_iter(test.chars().collect::<Vec<_>>());
         Self { input: String::from(input), hand: hand, bid:bid, hand_type:hand_type }
     }
@@ -117,34 +121,35 @@ fn line_parser(s: &str) -> IResult<&str, Game> {
         |(hand, bet)| {
             Game::new(hand, bet)
         })(s)
-}
-
-
-fn main() -> Result<(), ParseError> {
-    let args = Args::parse();
-
-    let input_file = File::open(args.input).unwrap();
-    let input_ranges = parse(BufReader::new(input_file))?;
-
-    let mut games = vec![];
-    for range in input_ranges {
-        println!("{}", range);
-        match all_consuming(line_parser)(&range) {
-            Ok(g) => games.push(g.1),
-            Err(e) => panic!("Parse error! {}", e)
+    }
+    
+    
+    fn main() -> Result<(), ParseError> {
+        let args = Args::parse();
+        
+        let input_file = File::open(args.input).unwrap();
+        let input_ranges = parse(BufReader::new(input_file))?;
+        
+        let mut games = vec![];
+        for range in input_ranges {
+            println!("{}", range);
+            match all_consuming(line_parser)(&range) {
+                Ok(g) => games.push(g.1),
+                Err(e) => panic!("Parse error! {}", e)
+            }
+            
         }
-
+        games.sort();
+        //games.reverse();
+        
+        let mut answer = 0;
+        for (index, game) in games.iter().enumerate() {
+            println!("{}: {:?}", index, game);
+            answer += (index+1) * game.bid as usize;
+        }
+        
+        println!("Answer: {}", answer);
+        
+        Ok(())
     }
-    games.sort();
-    //games.reverse();
-
-    let mut answer = 0;
-    for (index, game) in games.iter().enumerate() {
-        println!("{}: {:?}", index, game);
-        answer += (index+1) * game.bid as usize;
-    }
-
-    println!("Answer: {}", answer);
-
-    Ok(())
-}
+    
