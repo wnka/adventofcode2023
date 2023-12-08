@@ -1,7 +1,8 @@
-use std::{fs::File, io::{BufRead, BufReader}, str::Chars};
+use std::{fs::File, io::{BufRead, BufReader}, str::Chars, cmp::Ordering};
 use std::collections::HashSet;
 
 use clap::Parser;
+use nom::{combinator::{all_consuming, map}, bytes::complete::{take_until, tag}, character::complete::{u64, alphanumeric1}, sequence::separated_pair, IResult};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -37,12 +38,40 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
     Ok(result)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Ord, Eq)]
 struct Game {
     input: String,
     hand: Vec<u8>,
     bid: u64,
     hand_type: u8 // 5 of a kind = 5, 4 of a kind = 4, etc
+}
+
+impl PartialOrd for Game {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let hand_cmp = self.hand_type.cmp(&other.hand_type);
+        if hand_cmp != Ordering::Equal { 
+            println!("CMP!");
+            return Some(hand_cmp);
+        }
+
+        assert_eq!(self.hand.len(), other.hand.len());
+        for (s, o) in self.hand.iter().zip(other.hand.iter()) {
+            let card_cmp = s.cmp(o);
+            match s.cmp(o) {
+                Ordering::Equal => (),
+                _ => { return Some(card_cmp); }
+            }
+        }
+
+        Some(Ordering::Equal)
+    }
+}
+
+impl PartialEq for Game {
+    fn eq(&self, other: &Self) -> bool {
+        self.input == other.input &&
+        self.bid == other.bid
+    }
 }
 
 impl Game {
@@ -68,20 +97,40 @@ impl Game {
     }
 }
 
+fn line_parser(s: &str) -> IResult<&str, Game> {
+    map(
+        separated_pair(alphanumeric1, tag(" "), u64),
+        |(hand, bet)| {
+            Game::new(hand, bet)
+        })(s)
+}
+
+
 fn main() -> Result<(), ParseError> {
     let args = Args::parse();
 
     let input_file = File::open(args.input).unwrap();
     let input_ranges = parse(BufReader::new(input_file))?;
 
+    let mut games = vec![];
     for range in input_ranges {
         println!("{}", range);
+        match all_consuming(line_parser)(&range) {
+            Ok(g) => games.push(g.1),
+            Err(e) => panic!("Parse error! {}", e)
+        }
+
+    }
+    games.sort();
+    games.reverse();
+
+    let mut answer = 0;
+    for (index, game) in games.iter().enumerate() {
+        println!("{}: {:?}", index, game);
+        answer += (index+1) * game.bid as usize;
     }
 
-    let test = "12345";
-
-    let hand = Game::new(test, 123);
-    println!("Hand: {:?}", hand);
+    println!("Answer: {}", answer);
 
     Ok(())
 }
