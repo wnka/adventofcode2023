@@ -50,7 +50,6 @@ impl PartialOrd for Game {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let hand_cmp = self.hand_type.cmp(&other.hand_type);
         if hand_cmp != Ordering::Equal { 
-            println!("CMP!");
             return Some(hand_cmp);
         }
         
@@ -95,6 +94,8 @@ impl Game {
         occurrences.sort();
         
         let joker_count = input.matches('J').count();
+        // If all jokers, max score.
+        // Otherwise, jokers add on to the count of the most prominent card.
         let hand_type = if joker_count == 5 { 7 } else {
             let hand_type1 = occurrences.pop().unwrap();
             let hand_type2 = occurrences.pop();
@@ -132,7 +133,6 @@ fn line_parser(s: &str) -> IResult<&str, Game> {
         
         let mut games = vec![];
         for range in input_ranges {
-            println!("{}", range);
             match all_consuming(line_parser)(&range) {
                 Ok(g) => games.push(g.1),
                 Err(e) => panic!("Parse error! {}", e)
