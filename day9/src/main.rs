@@ -64,6 +64,8 @@ fn get_next_element(input: Vec<i64>) -> i64 {
         index += 1;
     }
 
-    println!("dx: {:?}", dx);
-    dx.iter().map(|v| v.last().unwrap()).sum()
+    dx.reverse();
+    let new_val = dx.iter().fold(0, |sum, v| v.get(0).unwrap()-sum);
+    println!("new_val: {}, dx: {:?}", new_val, dx);
+    new_val
 }
