@@ -140,7 +140,7 @@ impl std::convert::TryFrom<char> for Direction {
             'F' => Self::SouthEast,
             '.' => Self::Ground,
             'S' => Self::Starting,
-            _ => panic!("Unknown direction!")
+            _ => panic!("Unknown direction! {}", value)
         };
         Ok(ev)
     }
@@ -161,7 +161,11 @@ impl Map {
     }
 
     fn set_fill(&mut self, x: usize, y: usize) {
-        let point = self.points.get_mut(y).unwrap().get_mut(x).unwrap();
+        if x >= self.width || y >=self.height {
+            return
+        }
+        let point = self.points.get_mut(y).unwrap();
+        let point = point.get_mut(x).unwrap();
         if point.color.is_none() {
             point.color = Some(Color::Blue);
         }
@@ -180,6 +184,10 @@ impl Map {
             self.get_point(x+1, y),
             self.get_point(x, y-1),
             self.get_point(x, y+1),
+            self.get_point(x-1, y-1),
+            self.get_point(x+1, y+1),
+            self.get_point(x-1, y+1),
+            self.get_point(x+1, y-1),
         ]
     }
 }
@@ -209,11 +217,10 @@ fn main() -> Result<(), ParseError> {
         map.push(parsed_row);
     }
 
-    let width = map.len();
-    let height = map.get(0).unwrap().len();
+    let height = map.len();
+    let width = map.get(0).unwrap().len();
 
-
-    let mut map = Map { points: map, height, width };
+    let mut map = Map { points: map, width, height };
 
     assert!(cur_x.is_some());
     assert!(cur_y.is_some());
@@ -246,6 +253,7 @@ fn main() -> Result<(), ParseError> {
     // (up/down/left/right) or touches an edge (the direction goes out of
     // bounds) it's blue. Then I just count everything that's not blue and not
     // red.
+    println!("Fill pass 1");
     for row in 0..map.height {
         for col in 0..map.width {
             let adjacents = map.get_adjacent(col, row);
@@ -266,8 +274,9 @@ fn main() -> Result<(), ParseError> {
     }
 
     // Hack, gotta do 2 passes since otherwise you miss the bottom right
+    println!("Fill pass 2");
     for row in (0..map.height).rev() {
-        for col in (0..map.width-1).rev() {
+        for col in (0..map.width).rev() {
             let adjacents = map.get_adjacent(col, row);
             if adjacents.iter().any(|v|{
                 match v {
