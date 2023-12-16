@@ -37,6 +37,23 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
     }
     Ok(result)
 }
+
+enum Move {
+    North,
+    South,
+    East,
+    West,
+}
+
+fn go(direction: &Move, x: usize, y: usize) -> (usize, usize) {
+    match direction {
+        Move::North => (x, y-1),
+        Move::South => (x, y+1),
+        Move::East => (x+1, y),
+        Move::West => (x-1, y)
+    }
+}
+
 // | is a vertical pipe connecting north and south.
 // - is a horizontal pipe connecting east and west.
 // L is a 90-degree bend connecting north and east.
@@ -55,6 +72,26 @@ enum Direction {
     SouthEast, // F
     Ground, // .
     Starting
+}
+
+impl Direction {
+    fn next_move(&self, incoming_step: &Move) -> Option<Move> {
+        match (self, incoming_step) {
+            (Direction::NorthSouth, Move::North) => Some(Move::North), // I came in through the north, I should go north
+            (Direction::NorthSouth, Move::South) => Some(Move::South),
+            (Direction::EastWest, Move::West) => Some(Move::West),
+            (Direction::EastWest, Move::East) => Some(Move::East),
+            (Direction::NorthEast, Move::West) => Some(Move::North),
+            (Direction::NorthEast, Move::South) => Some(Move::East),
+            (Direction::NorthWest, Move::East) => Some(Move::North),
+            (Direction::NorthWest, Move::South) => Some(Move::West),
+            (Direction::SouthEast, Move::West) => Some(Move::South),
+            (Direction::SouthEast, Move::North) => Some(Move::East),
+            (Direction::SouthWest, Move::East) => Some(Move::South),
+            (Direction::SouthWest, Move::North) => Some(Move::West),
+            (_,_) => None
+        }
+    }
 }
 
 impl std::fmt::Display for Direction {
@@ -137,16 +174,31 @@ fn main() -> Result<(), ParseError> {
     assert!(cur_x.is_some());
     assert!(cur_y.is_some());
 
-    let cur_x = cur_x.unwrap();
-    let cur_y = cur_y.unwrap();
-
-    // This is just a test
-    //map.get_mut(0).unwrap().get_mut(0).unwrap().color = Some(Color::Red);
+    let mut cur_x = cur_x.unwrap();
+    let mut cur_y = cur_y.unwrap();
 
     println!("Starting x: {} y: {}", cur_x, cur_y);
 
     // try left
     //let to_the_left = map.get_mut(cur_x+1).unwrap();
+
+    let mut step_count = 0;
+    // TODO this is a cheat based on me looking at the input
+    let mut step = Some(Move::North);
+    while let Some(s) = step {
+        step_count += 1;
+        (cur_x, cur_y) = go(&s, cur_x, cur_y);
+        let p = map.get_mut(cur_y).unwrap().get_mut(cur_x).unwrap();
+        p.color = match p.color {
+            None => Some(Color::Red),
+            Some(s) => Some(s)
+        };
+        step = p.direction.next_move(&s);
+
+        if let Direction::Starting = p.direction {
+            break
+        }
+    }
 
     for row in map.iter_mut() {
         for col in row.iter_mut() {
@@ -155,6 +207,8 @@ fn main() -> Result<(), ParseError> {
         }
         println!();
     }
+
+    println!("Step count: {}, farthest: {}", step_count, step_count/2);
 
     Ok(())
 }
