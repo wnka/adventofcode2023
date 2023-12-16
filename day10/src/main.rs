@@ -210,5 +210,11 @@ fn main() -> Result<(), ParseError> {
 
     println!("Step count: {}, farthest: {}", step_count, step_count/2);
 
+    // TODO: For part two, I can color the stuff not in a loop. I can start at
+    // an edge, and if that point either touches something blue
+    // (up/down/left/right) or touches an edge (the direction goes out of
+    // bounds) it's blue. Then I just count everything that's not blue and not
+    // red.
+
     Ok(())
 }
