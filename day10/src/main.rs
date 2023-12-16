@@ -62,7 +62,7 @@ fn go(direction: &Move, x: usize, y: usize) -> (usize, usize) {
 // F is a 90-degree bend connecting south and east.
 // . is ground; there is no pipe in this tile.
 // S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Direction {
     NorthSouth, // |
     EastWest, // -
@@ -110,6 +110,7 @@ impl std::fmt::Display for Direction {
     }
 }
 
+#[derive(Clone, Copy)]
 struct Point {
     x: usize,
     y: usize,
@@ -145,6 +146,43 @@ impl std::convert::TryFrom<char> for Direction {
     }
 }
 
+struct Map {
+    points: Vec<Vec<Point>>,
+    width: usize,
+    height: usize
+}
+
+impl Map {
+    fn set_path(&mut self, x: usize, y: usize) {
+        let point = self.points.get_mut(y).unwrap().get_mut(x).unwrap();
+        if point.color.is_none() {
+            point.color = Some(Color::Red);
+        }
+    }
+
+    fn set_fill(&mut self, x: usize, y: usize) {
+        let point = self.points.get_mut(y).unwrap().get_mut(x).unwrap();
+        if point.color.is_none() {
+            point.color = Some(Color::Blue);
+        }
+    }
+
+    fn get_point(&self, x: usize, y: usize) -> Option<Point> {
+        match self.points.get(y) {
+            Some(row) => row.get(x).copied(),
+            None => None
+        }
+    }
+
+    fn get_adjacent(&self, x: usize, y: usize) -> Vec<Option<Point>> {
+        vec![
+            self.get_point(x-1, y),
+            self.get_point(x+1, y),
+            self.get_point(x, y-1),
+            self.get_point(x, y+1),
+        ]
+    }
+}
 fn main() -> Result<(), ParseError> {
     let args = Args::parse();
 
@@ -171,6 +209,12 @@ fn main() -> Result<(), ParseError> {
         map.push(parsed_row);
     }
 
+    let width = map.len();
+    let height = map.get(0).unwrap().len();
+
+
+    let mut map = Map { points: map, height, width };
+
     assert!(cur_x.is_some());
     assert!(cur_y.is_some());
 
@@ -179,20 +223,17 @@ fn main() -> Result<(), ParseError> {
 
     println!("Starting x: {} y: {}", cur_x, cur_y);
 
-    // try left
-    //let to_the_left = map.get_mut(cur_x+1).unwrap();
-
     let mut step_count = 0;
     // TODO this is a cheat based on me looking at the input
     let mut step = Some(Move::North);
     while let Some(s) = step {
         step_count += 1;
         (cur_x, cur_y) = go(&s, cur_x, cur_y);
-        let p = map.get_mut(cur_y).unwrap().get_mut(cur_x).unwrap();
-        p.color = match p.color {
-            None => Some(Color::Red),
-            Some(s) => Some(s)
-        };
+        let p = map.get_point(cur_x, cur_y).unwrap();
+        assert_eq!(p.x, cur_x);
+        assert_eq!(p.y, cur_y);
+
+        map.set_path(p.x, p.y);
         step = p.direction.next_move(&s);
 
         if let Direction::Starting = p.direction {
@@ -200,21 +241,62 @@ fn main() -> Result<(), ParseError> {
         }
     }
 
-    for row in map.iter_mut() {
-        for col in row.iter_mut() {
-            //col.color = Some(Color::Red);
+    // TODO: For part two, I can color the stuff not in a loop. I can start at
+    // an edge, and if that point either touches something blue
+    // (up/down/left/right) or touches an edge (the direction goes out of
+    // bounds) it's blue. Then I just count everything that's not blue and not
+    // red.
+    for row in 0..map.height {
+        for col in 0..map.width {
+            let adjacents = map.get_adjacent(col, row);
+            if adjacents.iter().any(|v|{
+                match v {
+                    Some(p) => match p.color {
+                        Some(c) => c == Color::Blue,
+                        None => false
+                    },
+                    None => true
+                }
+            })
+            {
+                map.set_fill(col, row);
+            }
+
+        }
+    }
+
+    // Hack, gotta do 2 passes since otherwise you miss the bottom right
+    for row in (0..map.height).rev() {
+        for col in (0..map.width-1).rev() {
+            let adjacents = map.get_adjacent(col, row);
+            if adjacents.iter().any(|v|{
+                match v {
+                    Some(p) => match p.color {
+                        Some(c) => c == Color::Blue,
+                        None => false
+                    },
+                    None => true
+                }
+            })
+            {
+                map.set_fill(col, row);
+            }
+
+        }
+    }
+
+
+    let mut untouchable = 0;
+    for row in map.points.iter() {
+        for col in row.iter() {
+            if col.color.is_none() { untouchable += 1; }
             print!("{}", col);
         }
         println!();
     }
 
     println!("Step count: {}, farthest: {}", step_count, step_count/2);
-
-    // TODO: For part two, I can color the stuff not in a loop. I can start at
-    // an edge, and if that point either touches something blue
-    // (up/down/left/right) or touches an edge (the direction goes out of
-    // bounds) it's blue. Then I just count everything that's not blue and not
-    // red.
+    println!("Untouchable: {}", untouchable);
 
     Ok(())
 }
