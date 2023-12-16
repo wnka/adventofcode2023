@@ -184,6 +184,8 @@ impl Map {
             self.get_point(x+1, y),
             self.get_point(x, y-1),
             self.get_point(x, y+1),
+            // TODO: I don't think diagonals should be in.
+
             self.get_point(x-1, y-1),
             self.get_point(x+1, y+1),
             self.get_point(x-1, y+1),
@@ -294,6 +296,9 @@ fn main() -> Result<(), ParseError> {
         }
     }
 
+    // TODO:
+    // https://www.reddit.com/r/adventofcode/comments/18f1sgh/2023_day_10_part_2_advise_on_part_2/
+    // Use Pick's theorem or something. I think I give up.
 
     let mut untouchable = 0;
     for row in map.points.iter() {
