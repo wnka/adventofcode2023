@@ -1,6 +1,8 @@
-use std::{fs::File, io::{BufRead, BufReader}, fmt::Error};
+use std::{fs::File, io::{BufRead, BufReader}, fmt::{Error, self}, path::Display};
 
 use clap::Parser;
+
+use colored::*;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -35,7 +37,6 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
     }
     Ok(result)
 }
-
 // | is a vertical pipe connecting north and south.
 // - is a horizontal pipe connecting east and west.
 // L is a 90-degree bend connecting north and east.
@@ -45,7 +46,7 @@ fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: BufRead
 // . is ground; there is no pipe in this tile.
 // S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
 #[derive(Debug)]
-enum Directions {
+enum Direction {
     NorthSouth, // |
     EastWest, // -
     NorthEast, // L
@@ -56,7 +57,39 @@ enum Directions {
     Starting
 }
 
-impl std::convert::TryFrom<char> for Directions {
+impl std::fmt::Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let char = match self {
+            Self::NorthSouth => '|',
+            Self::EastWest => '-',
+            Self::NorthEast => 'L',
+            Self::NorthWest => 'J',
+            Self::SouthWest => '7',
+            Self::SouthEast => 'F',
+            Self::Ground => '.',
+            Self::Starting => 'S',
+        };
+        write!(f, "{}", char)
+    }
+}
+
+struct Point {
+    x: usize,
+    y: usize,
+    direction: Direction,
+    color: Option<colored::Color>,
+}
+
+impl std::fmt::Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.color {
+            Some(c) => write!(f, "{}", ColoredString::from(format!("{}", self.direction)).color(c)),
+            None => write!(f, "{}", self.direction)
+        }
+    }
+}
+
+impl std::convert::TryFrom<char> for Direction {
     type Error = Error;
 
     fn try_from(value: char) -> Result<Self, Self::Error> {
@@ -80,10 +113,47 @@ fn main() -> Result<(), ParseError> {
 
     let input_file = File::open(args.input).unwrap();
     let input_ranges = parse(BufReader::new(input_file))?;
-    for range in input_ranges {
-        println!("{}", range);
-        let dirs : Vec<Directions> = range.chars().map(|c| Directions::try_from(c).unwrap()).collect();
-        println!("{:?}", dirs);
+    let mut map : Vec<Vec<Point>> = vec![];
+    let mut cur_x = None;
+    let mut cur_y = None;
+    for (row, range) in input_ranges.iter().enumerate() {
+        let mut parsed_row = vec![];
+        for (col, val) in range.chars().enumerate()
+        {
+            let dir = Direction::try_from(val).unwrap();
+            let color = match dir {
+                Direction::Starting => {
+                    cur_x = Some(col);
+                    cur_y = Some(row);
+                    Some(Color::Green)
+                },
+                _ => None
+            };
+            parsed_row.push(Point {x: col, y: row, direction: dir, color});
+        }
+        map.push(parsed_row);
+    }
+
+    assert!(cur_x.is_some());
+    assert!(cur_y.is_some());
+
+    let cur_x = cur_x.unwrap();
+    let cur_y = cur_y.unwrap();
+
+    // This is just a test
+    //map.get_mut(0).unwrap().get_mut(0).unwrap().color = Some(Color::Red);
+
+    println!("Starting x: {} y: {}", cur_x, cur_y);
+
+    // try left
+    //let to_the_left = map.get_mut(cur_x+1).unwrap();
+
+    for row in map.iter_mut() {
+        for col in row.iter_mut() {
+            //col.color = Some(Color::Red);
+            print!("{}", col);
+        }
+        println!();
     }
 
     Ok(())
