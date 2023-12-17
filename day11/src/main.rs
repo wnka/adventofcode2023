@@ -58,10 +58,15 @@ fn main() -> Result<(), ParseError> {
 
     let mut duped = vec![];
 
-    for range in input_ranges {
+    let mut x_gaps = vec![];
+    let mut y_gaps = vec![];
+
+
+    for (i, range) in input_ranges.iter().enumerate() {
         duped.push(range.chars().collect::<Vec<char>>());
         if range.chars().all(|c| c == '.') {
-            duped.push(range.chars().collect::<Vec<char>>());
+            //duped.push(range.chars().collect::<Vec<char>>());
+            y_gaps.push(i);
         }
         println!("{}", range);
     }
@@ -69,10 +74,11 @@ fn main() -> Result<(), ParseError> {
     let tpd = transpose(duped);
 
     let mut duped = vec![];
-    for range in tpd {
+    for (i, range) in tpd.iter().enumerate() {
         duped.push(range.clone());
         if range.iter().all(|c| *c == '.') {
-            duped.push(range.clone());
+            //duped.push(range.clone());
+            x_gaps.push(i);
         }
     }
 
@@ -81,6 +87,9 @@ fn main() -> Result<(), ParseError> {
     for line in &input {
         println!("{:?}", line);
     }
+
+    println!("x-gaps: {:?}", x_gaps);
+    println!("y-gaps: {:?}", y_gaps);
 
     let mut locations = vec![];
 
@@ -98,8 +107,25 @@ fn main() -> Result<(), ParseError> {
     for i in &source {
         for j in &source {
             let distance = ((i.0 - j.0) as i64).abs() + ((i.1 - j.1) as i64).abs();
-            println!("distance from {:?} to {:?}: {}", i, j, distance);
+            //println!("distance from {:?} to {:?}: {}", i, j, distance);
             distances += distance;
+            let x_range = (std::cmp::min(i.0, j.0))..(std::cmp::max(i.0, j.0));
+            let x_plus: i64 = x_gaps.iter().map(|g|{
+                match x_range.contains(g) {
+                    true => 999999,
+                    false => 0
+                }
+            }).sum();
+
+            let y_range = (std::cmp::min(i.1, j.1))..(std::cmp::max(i.1, j.1));
+            let y_plus: i64 = y_gaps.iter().map(|g|{
+                match y_range.contains(g) {
+                    true => 999999,
+                    false => 0
+                }
+            }).sum();
+
+            distances += x_plus + y_plus;
         }
     }
 
