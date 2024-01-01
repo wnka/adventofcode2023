@@ -151,3 +151,43 @@ pub fn parse<T>(input_buffer: T) -> Result<Vec<String>, ParseError> where T: Buf
     }
     Ok(ranges)
 }
+
+#[derive(Default)]
+pub struct Round {
+    red: u32,
+    green: u32,
+    blue: u32,
+}
+
+pub struct Game2 {
+    rounds: Vec<Round>,
+}
+
+pub fn generate(input: &str) -> Vec<Game2> {
+    input
+        .lines()
+        .map(|line| Game2 {
+            rounds: line
+                .split(": ")
+                .skip(1)
+                .next()
+                .unwrap()
+                .split("; ")
+                .map(|round| {
+                    let mut res = Round::default();
+                    for color in round.split(", ") {
+                        let mut it = color.split(" ");
+                        let num = u32::from_str_radix(it.next().unwrap(), 10).unwrap();
+                        match it.next().unwrap() {
+                            "red" => res.red = num,
+                            "blue" => res.blue = num,
+                            "green" => res.green = num,
+                            _ => panic!(),
+                        }
+                    }
+                    res
+                })
+                .collect(),
+        })
+        .collect()
+}

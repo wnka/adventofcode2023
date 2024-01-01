@@ -7,9 +7,15 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let input_file = File::open("input.txt").unwrap();
     let input_ranges = day2::parse(BufReader::new(input_file)).unwrap();
 
-    c.bench_function("Parse input", |b| b.iter(|| {
+    c.bench_function("Parse input nom", |b| b.iter(|| {
         for range in &input_ranges {
             let _ = all_consuming(day2::line_parser)(&range);
+        }
+    }
+    ));
+    c.bench_function("Parse input split", |b| b.iter(|| {
+        for range in &input_ranges {
+            let _ = day2::generate(range);
         }
     }
     ));
