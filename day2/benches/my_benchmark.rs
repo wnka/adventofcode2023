@@ -14,19 +14,18 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     input_file.read_to_string(&mut contents).expect("Unable to read the file");
 
     c.bench_function("Parse input nom many0", |b| b.iter(|| {
-        let _output = many0(day2::line_parser)(&contents);
+        let output = many0(day2::line_parser)(&contents);
+        assert_eq!(100, output.unwrap().1.len());
     }
     ));
     c.bench_function("Parse input nom loop", |b| b.iter(|| {
-        for range in &input_ranges {
-            let _ = all_consuming(day2::line_parser)(range);
-        }
+        let output : Vec<_> = input_ranges.iter().map(|l| all_consuming(day2::line_parser)(l)).collect();
+        assert_eq!(100, output.len());
     }
     ));
     c.bench_function("Parse input split", |b| b.iter(|| {
-        for range in &input_ranges {
-            let _ = day2::generate(range);
-        }
+        let output = day2::generate(&contents);
+        assert_eq!(100, output.len());
     }
     ));
 }
