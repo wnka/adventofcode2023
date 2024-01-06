@@ -14,7 +14,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     input_file.read_to_string(&mut contents).expect("Unable to read the file");
 
     c.bench_function("Parse input nom many0", |b| b.iter(|| {
-        let output = many0(day2::line_parser)(&contents);
+        let output = all_consuming(many0(day2::line_parser))(&contents);
         assert_eq!(100, output.unwrap().1.len());
     }
     ));
